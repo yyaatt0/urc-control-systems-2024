@@ -24,7 +24,7 @@ libhal_build_demos(
   #pump_manager_demo
   scd40_demo
   soil_sensor_demo
-  drv8825_demo
+  # drv8825_demo
   tla2528_output_pin_demo
   tla2528_input_pin_demo
   tla2528_analog_input_demo
