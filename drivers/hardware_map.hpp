@@ -40,6 +40,7 @@ struct application_framework
   hal::output_pin* out_pin4;
   hal::pwm* pwm0;
   hal::pwm* pwm1;
+  hal::pwm* pwm2;
   hal::adc* adc0;
   hal::adc* adc1;
   // hal::serial* esp;

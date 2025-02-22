@@ -1,6 +1,6 @@
 #include <cmath>
 #include <cstdint>
-#include <gimble.hpp>
+#include "../include/gimble.hpp"
 #include <libhal-util/i2c.hpp>
 #include <libhal/timeout.hpp>
 #include <libhal/units.hpp>

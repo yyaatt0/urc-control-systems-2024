@@ -24,6 +24,7 @@ application_framework initialize_platform()
     .out_pin4 = &hal::micromod::v1::output_g4(),
     .pwm0 = &hal::micromod::v1::pwm0(),
     .pwm1 = &hal::micromod::v1::pwm1(),
+    .pwm2 =  &hal::micromod::v1::pwm2(),
     .adc0 = &hal::micromod::v1::a0(),
     .adc1 = &hal::micromod::v1::a1(),
     // .esp,
