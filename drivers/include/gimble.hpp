@@ -1,77 +1,66 @@
 #pragma once
 
-// Contains MPU 6050 (will not use MPU from libhal, does not come with gryoscope reading)
-// Contains CAN
-// Contains Servo (two axis gimble)
+// Contains MPU 6050 (will not use MPU from libhal, does not come with gryoscope
+// reading) Contains CAN Contains Servo (two axis gimble)
 
+#include <libhal-actuator/rc_servo.hpp>
+#include <libhal-sensor/imu/icm20948.hpp>
 #include <libhal/can.hpp>
 #include <libhal/i2c.hpp>
 #include <libhal/pwm.hpp>
-#include <libhal-actuator/rc_servo.hpp>
-#include <libhal/pwm.hpp> 
+
+// https://github.com/libhal/libhal-sensor/blob/main/include/libhal-sensor/imu/icm20948.hpp
 
 namespace sjsu::drivers {
-    class Gimble {
-        public:
+class Gimble
+{
+public:
+  Gimble(hal::i2c& p_i2c,
+         hal::actuator::rc_servo& servo_pan1,
+         hal::actuator::rc_servo& servo_pan2,
+         hal::actuator::rc_servo& servo_tilt);
 
-            struct MPU6050_data {
-                float x;
-                float y;
-                float z;
-            };
+  void read_can_input(
+    hal::can& p_can);  // Takes CAN input and reads joystick inputs
 
-            enum mpu_registers {
-                accel_xyz = 0x3b, // Starting register to read the HI and LOW byte for the accelerometer x, y, z data
-                accel_config = 0x1C, // 0b0 for no self-test and scale to 2g
-                gyro_xyz = 0x43, // Starting register to read the HI and LOW byte for the gyroscope x, y, z data
-                gyro_config = 0x1B, // 0b0 for no self-test and scale to 250 degrees/s
-                enable_reg = 0x6B, // 0b0 starting the mpu
-            };
+  void left(hal::degrees init_degree);
+  void right(hal::degrees init_degree);
+  void up(hal::degrees init_degree);
+  void down(hal::degrees init_degree);
 
-            Gimble(hal::i2c &p_i2c, 
-                hal::actuator::rc_servo &servo_pan1, 
-                hal::actuator::rc_servo &servo_pan2, 
-                hal::actuator::rc_servo &servo_tilt);
+  void stable();  // Takes current roll/pitch/yaw and use PID Control to
+                  // continuously set the camera at that setting
 
-            void read_can_input(hal::can &p_can); // Takes CAN input and reads joystick inputs
+private:
+  // Will update the current yaw, pitch, roll 
+  void update_orientation();
 
-            void left(hal::degrees init_degree);
-            void right(hal::degrees init_degree);
-            void up(hal::degrees init_degree);
-            void down(hal::degrees init_degree);
-            
-            void stable(); // Takes current roll/pitch/yaw and use PID Control to continuously set the camera at that setting 
+  // Current measurements
+  hal::degrees current_roll;
+  hal::degrees current_pitch;
+  hal::degrees current_yaw;
 
-        private:
-            // Functions to support public functions 
-            MPU6050_data read_accel();
-            MPU6050_data read_gyro();
-            hal::degrees roll();
-            hal::degrees pitch();
-            hal::degrees yaw(); 
+  // For PID Control
+  bool stable_mode = false;
+  hal::degrees stable_roll;
+  hal::degrees stable_pitch;
+  hal::degrees stable_yaw;
 
-            hal::i2c& m_i2c; // For MPU
+  float Kp_theta;  // Proportional Gain
+  float Ki_theta;  // Integral Gain
+  float Kd_theta;  // Derivative Gain
 
-            // For PID Control 
-            bool stable_mode = false; 
-            hal::degrees current_roll;
-            hal::degrees current_pitch;
-            hal::degrees current_yaw;
+  // home position
+  hal::degrees current_pan = hal::degrees(-90);
+  hal::degrees current_tilt = hal::degrees(0);
 
-            float Kp_theta; // Proportional Gain
-            float Ki_theta; // Integral Gain
-            float Kd_theta; // Derivative Gain
+  // Object declaration 
+  hal::actuator::rc_servo& servo_pan1;
+  hal::actuator::rc_servo& servo_pan2;
+  hal::actuator::rc_servo& servo_tilt;
+  hal::i2c& m_i2c;  // For MPU
+  hal::sensor::icm20948 icm;
 
-            hal::byte const mpu6050_address = 0x68;
-            
-            //home position
-            hal::degrees current_pan = hal::degrees(-90);
-            hal::degrees current_tilt = hal::degrees(0);
-
-            hal::actuator::rc_servo &servo_pan1;
-            hal::actuator::rc_servo &servo_pan2;
-            hal::actuator::rc_servo &servo_tilt;
-
-            void updateHorizontalServos(); 
-    };
-}
+  void updateHorizontalServos();
+};
+}  // namespace sjsu::drivers
