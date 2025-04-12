@@ -4,6 +4,7 @@
 #include <libhal-util/steady_clock.hpp>
 #include <libhal/output_pin.hpp>
 #include <libhal/units.hpp>
+#include <libhal-util/can.hpp>
 
 #include "../hardware_map.hpp"
 #include "../include/gimble.hpp"
@@ -16,6 +17,13 @@ void application(application_framework& p_framework)
 {
   auto& clock = *p_framework.steady_clock;
   auto& console = *p_framework.terminal;
+  auto& can_transceiver = *p_framework.can_transceiver.value();
+  // auto& can_bus_manager = *hardware_map.can_bus_manager.value();
+  // auto& can_identifier_filter = *hardware_map.can_identifier_filter.value();
+
+  //will find messages of 0x105 
+  hal::can_message_finder homing_reader(can_transceiver, 0x105);
+
   // The STM doesn't have i2c :(
   //   auto& i2c = *p_framework.i2c;
   hal::print(console, "Terminal Initialized");
@@ -29,6 +37,41 @@ void application(application_framework& p_framework)
 
   Gimble g1(i2c);
   hal::print<40>(console, "Gimble Initialized\n");
+
+  while (true) {
+    try {
+      std::optional<hal::can_message> msg = homing_reader.find();
+  
+      if (msg) {
+        hal::print(console, "found message\n");
+        hal::print(console, "Done homing\n");
+      }
+      hal::print<128>(console,
+                        "Circular Buffer Size: %d\n",
+                        can_transceiver.receive_cursor());
+    } catch (hal::timed_out const&) {
+      hal::print(console,
+        "hal::timed_out exception! which means that the device did not respond. "
+        "Moving to the next device address in the list.\n");
+    } catch (hal::resource_unavailable_try_again const& p_error) {
+      hal::print(console, "hal::resource_unavailable_try_again\n");
+      if (p_error.instance() == &can_transceiver) {
+        hal::print(console,
+          "\n"
+          "device on the bus. It appears as if the peripheral is not connected "
+          "to a can network. This can happen if the baud rate is incorrect, "
+          "the CAN transceiver is not functioning, or the devices on the bus "
+          "are not responding.\n"
+          "Calling terminate!\n"
+          "Consider powering down the system and checking all of your connections before "
+          "restarting the application.");
+        std::terminate();
+      }
+    } catch (...) {
+      hal::print(console, "Unknown exception caught in (...) block\n");
+      throw;
+    }
+  
 
   //   while (true) {
   //     auto accel_data = read_accel();
@@ -48,3 +91,4 @@ void application(application_framework& p_framework)
   //   }
 }
 }  // namespace sjsu::drivers
+}
